@@ -3,6 +3,10 @@ import sales
 import inventory
 import bookings
 import customers
+from database import init_db
+
+# Initialize database tables
+init_db()
 
 # Sidebar navigation
 st.sidebar.title("📊 Business Dashboard")

@@ -1,19 +1,25 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
 
 def show_customers():
     st.title("👥 Customer Management")
-    st.write("View and manage customer details")
 
-    data = {
-        "Name": ["Alice", "Bob", "Charlie"],
-        "Contact": ["+91-9876543210", "+91-9123456780", "+91-9988776655"],
-        "Bookings": [2, 1, 3]
-    }
-    df = pd.DataFrame(data)
-
+    conn = sqlite3.connect("business_dashboard.db")
+    df = pd.read_sql_query("SELECT * FROM customers", conn)
     st.dataframe(df)
 
-    st.text_input("Add New Customer Name")
-    st.text_input("Add Contact Number")
-    st.button("➕ Add Customer")
+    # Add new customer
+    st.subheader("➕ Add Customer")
+    name = st.text_input("Name")
+    contact = st.text_input("Contact")
+    email = st.text_input("Email")
+    location = st.text_input("Location")
+
+    if st.button("Save Customer"):
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO customers (name, contact, email, location) VALUES (?, ?, ?, ?)",
+                       (name, contact, email, location))
+        conn.commit()
+        st.success(f"✅ Added {name}")
+    conn.close()
