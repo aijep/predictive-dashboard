@@ -30,39 +30,56 @@ if uploaded_file is not None:
 else:
     st.info("Using sample data until a file is uploaded.")
 
-# Product filter
-product_choice = st.selectbox("Select Product", df["product"].unique())
+# Product filter with “All Products” option
+product_options = ["All Products"] + list(df["product"].unique())
+product_choice = st.selectbox("Select Product", product_options)
 
-# Date range filter (✅ fixed parentheses)
+# Date range filter
 start_date, end_date = st.date_input(
     "Select Date Range",
     [df["date"].min(), df["date"].max()]
 )
 
 # Filter data
-filtered_df = df[(df["product"] == product_choice) &
-                 (df["date"] >= pd.to_datetime(start_date)) &
+filtered_df = df[(df["date"] >= pd.to_datetime(start_date)) &
                  (df["date"] <= pd.to_datetime(end_date))]
 
-# Train model
-filtered_df["day_num"] = np.arange(len(filtered_df))
-X = filtered_df[["day_num"]]
-y = filtered_df["sales"]
-model = LinearRegression().fit(X, y)
+# Forecast function
+def forecast_product(data, product_name):
+    data = data[data["product"] == product_name].copy()
+    data["day_num"] = np.arange(len(data))
+    X = data[["day_num"]]
+    y = data["sales"]
+    model = LinearRegression().fit(X, y)
+    future_days = np.arange(len(data), len(data) + 7).reshape(-1, 1)
+    predictions = model.predict(future_days)
+    return pd.DataFrame({
+        "product": product_name,
+        "date": pd.date_range(start=data["date"].iloc[-1] + pd.Timedelta(days=1), periods=7),
+        "predicted_sales": predictions.astype(int)
+    })
 
-# Predict next 7 days
-future_days = np.arange(len(filtered_df), len(filtered_df) + 7).reshape(-1, 1)
-predictions = model.predict(future_days)
-future_df = pd.DataFrame({
-    "product": product_choice,
-    "date": pd.date_range(start=filtered_df["date"].iloc[-1] + pd.Timedelta(days=1), periods=7),
-    "predicted_sales": predictions.astype(int)
-})
+# Generate forecasts
+if product_choice == "All Products":
+    forecast_list = []
+    for p in df["product"].unique():
+        forecast_list.append(forecast_product(filtered_df, p))
+    future_df = pd.concat(forecast_list, ignore_index=True)
+else:
+    future_df = forecast_product(filtered_df, product_choice)
 
 # Plot
 fig, ax = plt.subplots()
-ax.plot(filtered_df["date"], filtered_df["sales"], label="Historical Sales")
-ax.plot(future_df["date"], future_df["predicted_sales"], label="Predicted Sales", linestyle="--")
+if product_choice == "All Products":
+    for p in df["product"].unique():
+        subset = filtered_df[filtered_df["product"] == p]
+        ax.plot(subset["date"], subset["sales"], label=f"{p} Historical")
+        subset_future = future_df[future_df["product"] == p]
+        ax.plot(subset_future["date"], subset_future["predicted_sales"], linestyle="--", label=f"{p} Forecast")
+else:
+    ax.plot(filtered_df["date"], filtered_df["sales"], label="Historical Sales")
+    ax.plot(future_df["date"], future_df["predicted_sales"], linestyle="--", label="Predicted Sales")
+
 ax.legend()
 st.pyplot(fig)
 
@@ -72,9 +89,10 @@ st.dataframe(future_df)
 
 # Download button
 csv = future_df.to_csv(index=False).encode('utf-8')
+file_name = "All_Products_forecast.csv" if product_choice == "All Products" else f"{product_choice}_forecast.csv"
 st.download_button(
     label="📥 Download Forecast CSV",
     data=csv,
-    file_name=f"{product_choice}_forecast.csv",
+    file_name=file_name,
     mime="text/csv"
 )
