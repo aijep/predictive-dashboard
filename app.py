@@ -111,7 +111,16 @@ summary = future_df.groupby("product")["predicted_sales"].sum().reset_index()
 summary.rename(columns={"predicted_sales": "Total Forecasted Sales"}, inplace=True)
 st.table(summary)
 
-# Download button
+# 🔹 Download summary metrics
+summary_csv = summary.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="📥 Download Summary Metrics CSV",
+    data=summary_csv,
+    file_name="Summary_Metrics.csv",
+    mime="text/csv"
+)
+
+# Download forecast data
 csv = future_df.to_csv(index=False).encode('utf-8')
 file_name = "All_Products_forecast.csv" if product_choice == "All Products" else f"{product_choice}_forecast.csv"
 st.download_button(
