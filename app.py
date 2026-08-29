@@ -84,7 +84,7 @@ if product_choice == "All Products":
 else:
     future_df = forecast_product(filtered_df, product_choice)
 
-# Plot
+# Plot forecasts
 fig, ax = plt.subplots()
 if product_choice == "All Products":
     for p in df["product"].unique():
@@ -110,6 +110,13 @@ st.subheader("📊 Summary Metrics")
 summary = future_df.groupby("product")["predicted_sales"].sum().reset_index()
 summary.rename(columns={"predicted_sales": "Total Forecasted Sales"}, inplace=True)
 st.table(summary)
+
+# Bar chart for summary metrics
+fig2, ax2 = plt.subplots()
+ax2.bar(summary["product"], summary["Total Forecasted Sales"], color=[color_map[p] for p in summary["product"]])
+ax2.set_ylabel("Total Forecasted Sales")
+ax2.set_title("Total Forecasted Sales per Product")
+st.pyplot(fig2)
 
 # 🔹 Download summary metrics
 summary_csv = summary.to_csv(index=False).encode('utf-8')
