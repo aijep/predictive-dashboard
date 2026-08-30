@@ -30,15 +30,14 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=30
 )
 
-# --- LOGIN FORM ---
-name, authentication_status, username = authenticator.login("Login", "main")  # ✅ valid location
+# ✅ VALID LOCATION ARGUMENT
+name, authentication_status, username = authenticator.login("Login", "sidebar")
 
 # --- LOGIN LOGIC ---
 if authentication_status:
     st.sidebar.success(f"Welcome, {name}!")
     role = credentials["usernames"][username]["role"]
 
-    # --- ROLE‑BASED DASHBOARD ---
     if role == "admin":
         st.title("Admin Dashboard")
         st.write("Manage products, bookings, and users here.")
