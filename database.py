@@ -52,5 +52,15 @@ def init_db():
     );
     """)
 
+    # Users table for authentication
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,   -- store hashed passwords
+        role TEXT DEFAULT 'viewer' -- roles: admin, staff, viewer
+    );
+    """)
+
     conn.commit()
     conn.close()
