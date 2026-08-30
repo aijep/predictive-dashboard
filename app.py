@@ -30,8 +30,8 @@ authenticator = stauth.Authenticate(
     cookie_expiry_days=30
 )
 
-# ✅ VALID LOCATION ARGUMENT
-name, authentication_status, username = authenticator.login("Login", "sidebar")
+# --- LOGIN FORM ---
+name, authentication_status, username = authenticator.login("Login", "sidebar")  # ✅ lowercase method name
 
 # --- LOGIN LOGIC ---
 if authentication_status:
