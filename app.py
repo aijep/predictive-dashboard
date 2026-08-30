@@ -1,17 +1,16 @@
 import streamlit as st
 import streamlit_authenticator as stauth
 import sqlite3
+import pandas as pd
 
-# --- Database connection ---
+# --- DATABASE CONNECTION ---
 conn = sqlite3.connect("business_dashboard.db")
 cursor = conn.cursor()
 
-# --- Fetch users from database ---
+# --- LOAD USERS FROM DATABASE ---
 cursor.execute("SELECT username, password, role FROM users")
 rows = cursor.fetchall()
-conn.close()
 
-# --- Build credentials dictionary ---
 credentials = {
     "usernames": {
         row[0]: {
@@ -23,33 +22,42 @@ credentials = {
     }
 }
 
-# --- Authentication setup ---
+# --- AUTHENTICATION SETUP ---
 authenticator = stauth.Authenticate(
-    credentials=credentials,
-    cookie_name="dashboard_cookie",
-    key="secret_key",
+    credentials,
+    "dashboard_cookie",
+    "random_key",
     cookie_expiry_days=30
 )
 
-# --- Login form ---
-authenticator.login(location="main")
+# --- LOGIN FORM ---
+name, authentication_status, username = authenticator.login("Login", "main")  # ✅ valid location
 
-# --- Dashboard logic ---
-if st.session_state.get("authentication_status"):
-    name = st.session_state["name"]
-    username = st.session_state["username"]
+# --- LOGIN LOGIC ---
+if authentication_status:
+    st.sidebar.success(f"Welcome, {name}!")
+    role = credentials["usernames"][username]["role"]
 
-    st.sidebar.title(f"Welcome, {name} 👋")
-    authenticator.logout("Logout", "sidebar")  # Added logout button
+    # --- ROLE‑BASED DASHBOARD ---
+    if role == "admin":
+        st.title("Admin Dashboard")
+        st.write("Manage products, bookings, and users here.")
+        df = pd.read_sql_query("SELECT * FROM users", conn)
+        st.dataframe(df)
 
-    st.title("Predictive Business Dashboard")
-    st.success("✅ Streamlit is running correctly.")
-    st.write("You are logged in as:", username)
-    st.write("Role:", credentials["usernames"][username]["role"])
-    st.write("This is your main dashboard area.")
-    st.write("Add your modules here — sales, inventory, bookings, etc.")
+    elif role == "manager":
+        st.title("Manager Dashboard")
+        st.write("View bookings and inventory.")
+        df = pd.read_sql_query("SELECT * FROM bookings", conn)
+        st.dataframe(df)
 
-elif st.session_state.get("authentication_status") is False:
+    else:
+        st.title("User Dashboard")
+        st.write("Welcome to the business dashboard!")
+
+    authenticator.logout("Logout", "sidebar")
+
+elif authentication_status is False:
     st.error("Username or password is incorrect.")
 else:
-    st.warning("Please log in to continue.")
+    st.warning("Please enter your credentials.")
