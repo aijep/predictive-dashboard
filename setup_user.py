@@ -1,3 +1,6 @@
+from database import init_db
+init_db()
+
 import sqlite3
 import streamlit_authenticator as stauth
 
@@ -5,8 +8,8 @@ import streamlit_authenticator as stauth
 conn = sqlite3.connect("business_dashboard.db")
 cursor = conn.cursor()
 
-# Hash the password securely
-hashed_password = stauth.Hasher(["admin123"]).generate()[0]
+# Hash the password securely (new API)
+hashed_password = stauth.Hasher.hash("admin123")
 
 # Insert a default admin user
 cursor.execute(

@@ -1,69 +1,55 @@
 import streamlit as st
-import sales
-import inventory
-import bookings
-import customers
-from database import init_db
-import sqlite3
 import streamlit_authenticator as stauth
+import sqlite3
 
-# Initialize database
-init_db()
+# --- Database connection ---
+conn = sqlite3.connect("business_dashboard.db")
+cursor = conn.cursor()
 
-# Fetch users from DB
-def get_users():
-    conn = sqlite3.connect("business_dashboard.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT username, password, role FROM users")
-    users = cursor.fetchall()
-    conn.close()
-    return users
+# --- Fetch users from database ---
+cursor.execute("SELECT username, password, role FROM users")
+rows = cursor.fetchall()
+conn.close()
 
-users = get_users()
-if not users:
-    st.warning("⚠️ No users found. Please add at least one user in the database.")
+# --- Build credentials dictionary ---
+credentials = {
+    "usernames": {
+        row[0]: {
+            "name": row[0].capitalize(),
+            "password": row[1],
+            "role": row[2]
+        }
+        for row in rows
+    }
+}
 
-# Prepare authenticator
-names = [u[0] for u in users]
-usernames = [u[0] for u in users]
-passwords = [u[1] for u in users]  # already hashed in DB
-
+# --- Authentication setup ---
 authenticator = stauth.Authenticate(
-    names, usernames, passwords,
-    "dashboard_cookie", "secret_key", cookie_expiry_days=30
+    credentials=credentials,
+    cookie_name="dashboard_cookie",
+    key="secret_key",
+    cookie_expiry_days=30
 )
 
-name, authentication_status, username = authenticator.login("Login", "main")
+# --- Login form ---
+authenticator.login(location="main")
 
-# Authentication flow
-if authentication_status:
-    st.sidebar.success(f"Welcome {name} 👋")
+# --- Dashboard logic ---
+if st.session_state.get("authentication_status"):
+    name = st.session_state["name"]
+    username = st.session_state["username"]
 
-    # Sidebar navigation
-    st.sidebar.title("📊 Business Dashboard")
-    option = st.sidebar.radio(
-        "Choose a module",
-        ["Sales", "Inventory", "Bookings", "Customers"]
-    )
+    st.sidebar.title(f"Welcome, {name} 👋")
+    authenticator.logout("Logout", "sidebar")  # Added logout button
 
-    # Route to modules
-    if option == "Sales":
-        sales.show_sales()
-    elif option == "Inventory":
-        inventory.show_inventory()
-    elif option == "Bookings":
-        bookings.show_bookings()
-    elif option == "Customers":
-        customers.show_customers()
+    st.title("Predictive Business Dashboard")
+    st.success("✅ Streamlit is running correctly.")
+    st.write("You are logged in as:", username)
+    st.write("Role:", credentials["usernames"][username]["role"])
+    st.write("This is your main dashboard area.")
+    st.write("Add your modules here — sales, inventory, bookings, etc.")
 
-    # Logout
-    authenticator.logout("Logout", "sidebar")
-
-    # Footer
-    st.markdown("---")
-    st.caption("🧠 Predictive Business Dashboard © 2026 | Powered by Streamlit + SQLite")
-
-elif authentication_status is False:
-    st.error("Invalid username or password")
-elif authentication_status is None:
-    st.warning("Please enter your credentials")
+elif st.session_state.get("authentication_status") is False:
+    st.error("Username or password is incorrect.")
+else:
+    st.warning("Please log in to continue.")
